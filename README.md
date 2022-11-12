@@ -17,6 +17,11 @@ python logger <port> <filename> [-h] [-v] [-p <period>]
 ## Notes
         List available serial ports with the follow command (Linux): dmesg | grep tty
 
-## Example
-Reading every second: 
+## Examples
+Print help info:
+
+        python logger
+
+Reading every second:
+
         python logger /dev/ttyUSB0 output.csv -v -p 1000
