@@ -14,6 +14,7 @@ import getopt
 from datetime import datetime
 from storage import CSVManager
 from pzem import PZEM
+from arduino import ARDUINO
 
 
 class MainApp:
@@ -28,13 +29,14 @@ class MainApp:
             self.show_help()
             exit(1)
 
-        self.com = sys.argv[1]
-        self.filename = sys.argv[2]
+        self.meter_type = sys.argv[1]
+        self.com = sys.argv[2]
+        self.filename = sys.argv[3]
         self.verbose = False
-        self.period = 1
+        self.period = 1000
         try:
             # Parsing argument
-            arguments, values = getopt.getopt(sys.argv[3:], self.options, self.long_options)
+            arguments, values = getopt.getopt(sys.argv[4:], self.options, self.long_options)
             # checking each argument
             for currentArgument, currentValue in arguments:
                 if currentArgument in ("-h", "--help"):
@@ -48,12 +50,14 @@ class MainApp:
             print(str(err))
             self.show_help()
             exit(1)
+        print('Parameters', self.meter_type, self.com, self.filename, self.verbose, self.period)
 
     @staticmethod
     def show_help():
         print("Home Power Meter Recorder")
-        print("usage: python logger <port> <filename> [-h] [-v] [-p <period>]")
+        print("usage: python logger <meter_type> <port> <filename> [-h] [-v] [-p <period>]")
         print("\npositional arguments:")
+        print("\tmeter_type\t\tPZEM or ARDUINO.")
         print("\tport\t\t\tSerial port.")
         print("\tfilename\t\tOutput file name.")
         print("\npositional arguments:")
@@ -63,38 +67,44 @@ class MainApp:
         # print("\tThe program needs root privileges to access the serial port, so you must use it with sudo.")
         print("\tList serial linux with the follow command: dmesg | grep tty")
         print("\nexample:")
-        print("\treading every second: python logger /dev/ttyUSB0 output.csv -v -p 1000")
+        print("\treading every second: python3 logger ARDUINO /dev/ttyUSB0 output.csv -v -p 1000")
         print("")
-
-    @staticmethod
-    def get_timestamp():
-        return int(datetime.now().timestamp() * 1000)
 
     def start(self):
         meter = None
-        ts = self.get_timestamp()
-        columns = ['voltage', 'current', 'power', 'power_factor', 'frequency']
         try:
-            meter = PZEM(com=self.com)
-            dm = CSVManager(self.filename, columns=['timestamp'] + columns)
+            if self.meter_type == 'PZEM':
+                meter = PZEM(com=self.com, period=self.period, verbose=self.verbose)
+            elif self.meter_type == 'ARDUINO':
+                meter = ARDUINO(com=self.com, period=self.period, verbose=self.verbose)
+            else:
+                show_help()
+                exit(1)
+
+            if self.verbose:
+                print(meter.columns)
+
+            dm = CSVManager(self.filename, meter.columns)
             while True:
-                new_ts = self.get_timestamp()
-                if new_ts - ts < self.period:
-                    continue
-                d = meter.read()
-                row = [new_ts] + [d[k] for k in columns]
-                dm.write(row)
-                if self.verbose:
-                    print(row, new_ts - ts)
-                ts = new_ts
+                ts = meter.ts
+                row = meter.read()
+                if row:
+                    if len(row) == len(meter.columns):
+                        dm.write(row)
+                        if self.verbose:
+                            print(row, meter.ts - ts)
+                    #else:
+                    #    print("Data Length Error.")
+                #else:
+                #    print("Null Data.")
 
         except KeyboardInterrupt:
             print('Exiting...')
         except Exception as e:
             print(e)
         finally:
-            meter.close()
-
+            if meter:
+                meter.close()
 
 # Run!
 app = MainApp()

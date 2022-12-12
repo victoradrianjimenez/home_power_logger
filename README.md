@@ -1,11 +1,12 @@
 # Home Power Logger
-Power consumption logger using the PZEM-004T AC module.
+Power consumption logger using the PZEM-004T AC module, or ARDUINO meter.
 
 ## Usage ##
 
-python logger <port> <filename> [-h] [-v] [-p <period>]
+python logger <meter_type> <port> <filename> [-h] [-v] [-p <period>]
 
 ## Positional arguments
+        meter_type              PZEM or ARDUINO.
         port                    Serial port.
         filename                Output file name.
 
@@ -20,8 +21,8 @@ python logger <port> <filename> [-h] [-v] [-p <period>]
 ## Examples
 Print help info:
 
-        python logger
+        python3 logger
 
 Reading every second:
 
-        python logger /dev/ttyUSB0 output.csv -v -p 1000
+        python3 logger ARDUINO /dev/ttyUSB0 output.csv -v -p 1000
